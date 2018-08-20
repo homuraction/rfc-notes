@@ -1,0 +1,159 @@
+:lang: ja
+:doctype: book
+:toc: left
+:toc-title: 目次
+:sectnums:
+:sectlinks:
+:icons: font
+:source-highlighter: coderay
+:exmaple-caption: 例
+:table-caption: 表
+:figure-caption: 図
+:author: homuraction
+:revnumber: 0.1
+:revdate: 2018/08/20
+
+= Hypertext Transfer Protocol (HTTP/1.1): Range Requests
+
+== Abstract
+
+HTTPは状態を持たないApplication層のプロトコルであり、それは配布用であり協力的でありhypertext informationシステムである.
+
+== Introduction
+
+HTTP clientはしばしばリクエストの中止や接続の切断によって生じるデータ転送割り込みに出くわす.
+あるclientが一部の表現(おそらくリクエストデータの一部を指している)を保持していた時、表現全体を(再度)転送するよりも後続のリクエストにおいて残りの表現を要求する事の方が理想的である.
+同様に、ローカルストレージが制限された端末にとって１ページの非常に巨大な文書や、埋め込まれた画像のような制限以上に大きな表現の部分集合のみをリクエストできる事は旨味がある.
+
+この文書はHTTP/1.1 Range Request、部分レスポンスそしてmultipart/byteranges media typeを定義する.
+
+Range requestsはHTTPのオプショナルな機能として設計されており、したがって、この機能を実装していない受信者(もしくは対象資源に対してこれをサポートしていないか)は相互運用性に衝撃を与えないように通常のGetリクエストとして応答する事ができる.
+部分的なレスポンスはこの機能を実装していないであろうキャッシュにより完全なレスポンス応答であると誤解されない事が明確なステータスコードによって示される.
+
+Range requestsメカニズムは拡張可能な範囲型を許すように設計されているものの、この仕様ではbyte範囲のためのリクエストのみを定義する.
+
+=== Conformance and Error Handling
+
+エラー処理に関する適合基準と考慮事項は https://tools.ietf.org/html/rfc7230#section-2.5[Section 2.5 of [RFC7230]] にて定義されている.
+
+=== Syntax Notation
+
+この仕様はABNF記法とそのリスト拡張を使用しており、それはabnf.adocおよびabnf-list-extension.adocにそれぞれ記述しているためそちらを参照する事.
+付録Cでは他の文書から輸入された規則を説明する.
+付録Dでは標準ABNF記法を全てのlist演算子で拡張した文法を集め紹介する.
+
+== Range Units
+
+ある表現は様々な構造単位に対応した部分範囲に分割する事ができ、それは表現のメディア型に固有の構造体に依存する.
+この `range unit` はRange requestsに対応する事を喧伝するための `Accept-Ranges` レスポンスヘッダフィールド用いられ、`Range` リクエストヘッダフィールドはリクエストされる表現の一部を描くために用いられ、`Content-Range` ペイロードヘッダフィールドは転送されている表現のあるPartに関する範囲説明している.
+
+```
+  range-unit = bytes-unit / other-range-unit
+      ; bytes-unit規則またはother-range-unit規則の
+      ;   どちらかがrange-unitとして採用される
+```
+
+=== Byte Ranges
+
+表現データがオクテット列としてペイロード内で転送される時、あるbyte範囲はHTTP上の任意の転送可能な表現に対する意味のある部分範囲である.
+`bytes` range unitはオクテット列のデータの部分範囲を表現するために定義される.
+
+```
+  bytes-unit = "bytes"
+      ; range-unitの具体的な値としての1つは
+      ; range-unit = "bytes"
+      ; であるという事
+```
+
+あるbyte-rangeリクエストは単一のbyte範囲、または、単一表現に収まる範囲集合を指定することができる.
+
+```
+  byte-ranges-specifier = bytes-unit "=" byte-range-set
+  byte-range-set        = 1#( byte-range-spec /
+                              suffix-byte-range-spec)
+                              ; 1つ以上の
+                              ; byte-range-specまたは
+                              ; suffix-byte-range-specを
+                              ; カンマ区切り(OWS有り)で並べたもの
+  byte-range-spec       = first-byte-pos "-" [ last-byte-pos ]
+                            ; last-byte-posはoptional
+  first-byte-pos        = 1*DIGIT ; 1桁以上の10進数
+  last-byte-pos         = 1*DIGIT
+```
+
+`byte-range-spec` 内の `first-byte-pos` 値には範囲内の最初のbyteからのオフセットを与える.
+`last-byte-pos` 値には範囲内の最後のbyteからのオフセットを与える.
+指定されたbyte位置は包括的なものである.
+byteオフセットは0から始まる.
+
+`byte-ranges-specifier` 値の例は下記である:
+
+```
+- 最初の500 bytes (byteオフセット 0-499, inclusive):
+  byte-ranges-specifier           =
+    bytes-unit "=" byte-range-set =
+    "bytes" "=" first-byte-pos    =
+    bytes=0-499
+- 第二の500 bytes (byteオフセット500-999, inclusive):
+  bytes=500-999
+```
+
+もし `last-byte-pos` 値が存在し、且つ、`first-byte-pos` よりも小さい場合、 `byte-range-spec` は無効である.
+
+clientは選択された表現のサイズを知らずにリクエストされたbyte数を制限する事ができる.
+もし `last-byte-pos` 値が存在しない、または、もしその値が現在の表現の長さ以上であるならば、そのbyte範囲は表現の残りの部分であると解釈される(サーバは現在選択された表現の長さより1小さい値を `last-byte-pos` として置き換える).
+
+あるclientは `suffix-byte-range-spec` を用いることで選択された表現の `最後からN bytes部分` をリクエストする事ができる.
+
+```
+  suffix-byte-range-spec = "-" suffix-length
+  suffix-length          = 1*DIGIT
+```
+
+もし選択された表現が指定された `suffix-length` よりも短い場合、表現全体が用いられる.
+
+追加例として、長さが10,000の表現を仮定すると:
+
+```
+- 最後の500 bytes (byteオフセット 9500-9999, inclusive):
+  bytes=-500
+または
+  bytes=9500-
+- 最初と最後のbytesのみ (bytes 0 と 9999):
+  bytes=0-0,-1
+- その他の有効だが正準ではない、第二の500 bytesの仕様 (bytesオフセット 500-999, inclusive)
+  bytes=500-600,601-999
+  bytes=500-700,601-999
+```
+
+`byte-range` 構文内において、`first-byte-pos` 、`last-byte-pos` 及び `suffix-length` はオクテットの10進数として表現される.
+そこにはペイロードの長さに対する事前定義された制限が無いため、受信者は**潜在的に大きな10進数を予期せねばならない**し、**整数変換オーバーフローに対する解析エラーを防がなければならない**.
+
+=== Other Range Units
+
+Range unitsは拡張可能である事を意図している.
+新たなRange unitsは、Section 5.1で定義するように、IANAに登録すべきである.
+
+=== Accept-Ranges
+
+`Accept-Ranges` ヘッダフィールドはサーバが対象資源に対しRange requestsをサポートしている事を示させる.
+
+```
+  Accept-Ranges     = acceptable-ranges
+  acceptable-ranges = 1#range-unit / "none"
+                        ; bytes,other-range-unit,...
+                        ; または
+                        ; none
+                        ; など
+```
+
+与えられた対象資源に対してbyte-range requestsをサポートするとあるオリジンサーバがどのrange unitsがサポートされているのかを示すために `Accept-Ranges: bytes` を送信するかもしれない.
+
+あるclientは関連資源に対するこのヘッダフィールドを受け取る事なくRange requestsを生成するかもしれない.
+Ranges unitsはSection 2で定義されている.
+
+対象資源に対して任意の種類のRange requestをサポートしないとあるサーバはclientに対しRange requstを試みない事を知らせるために `Accept-Ranges: none` を送信するかもしれない.
+
+== Range Requests
+
+=== Range
