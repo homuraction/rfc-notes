@@ -1,0 +1,69 @@
+:lang: ja
+:doctype: book
+:toc: left
+:toc-title: 目次
+:sectnums:
+:sectlinks:
+:icons: font
+:source-highlighter: coderay
+:exmaple-caption: 例
+:table-caption: 表
+:figure-caption: 図
+:author: homuraction
+:revnumber: 0.1
+:revdate: 2018/08/19
+
+= ABNF List Extention: #Rule
+
+RFC5234におけるABNF規則#ruleの拡張は、いくつかのフィールド値定義における可読性を向上させるために用いられる.
+
+elementsのカンマ区切りリストを定義するために、"*"と似ている、あるコンストラクト"#"が定義される.
+
+その完全な形式は `<n>#<m>element` であり、それは最低でもnそして最高でもm個のelementsを示し、各々の単一のコンマ(",")とオプショナルな空白(OWS)によって切り分けらる.
+
+そのリストコンストラクトを用いる任意の製品において、送信者は空のリストelementsを生成**してはならない**.
+言い換えるならば、送信者は下記の構文を満たすリストを生成**しなければならない**:
+
+```
+  1#element => element *( OWS "," OWS element)
+且つ:
+  #element => [ 1#element ] ; カンマのみ存在するなどは無し
+n >= 1 且つ m > 1の場合:
+  <n>#<m>element => element <n-1>*<m-1>(WOS "," OWS element)
+```
+
+レガシーなリスト規則との互換性のため、ある受信者は解析し空リストelementsの合理的な数を無視しなければならない: 値をマージする送信者の一般的なミスを取り扱うのに十分ではあるが、サービス拒否メカニズムとして使用する事はできない.
+言い換えると、受信者は下記の構文を満たすリストを受理**しなければならない**:
+
+```
+  #element => [ ("," / element) *(OWS "," [ OWS element ] ) ]
+  1#element => *( "," OWS ) element *( OWS "," [ OWS element ] )
+```
+
+空elementsは存在するelementsの数に寄与しない(カウントしない).
+例えば、これらのABNF製品が与えられたとする:
+
+```
+  example-list      = 1#example-list-elmt
+  example-list-elmt = token ; see Section 3.2.6
+```
+
+次に下記はexample-listとして有効な値である:
+
+```
+"foo,bar"
+"foo ,bar,"
+"foo , ,bar,charlie"
+```
+
+対照的に、少なくとも1つ空ではないelementがexample-list製品には求められるため、下記の値は無効である:
+
+```
+""
+","
+",   ,"
+```
+
+付録Bにはリストコンストラクトが拡張された後に受信者のために収集されたABNFを示す.
+
+https://tools.ietf.org/html/rfc7230#appendix-B[和訳ポイントも無いし面倒だから付録Bのリンクだけ貼っておきますので自分で確認してください]
