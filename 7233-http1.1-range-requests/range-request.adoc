@@ -221,3 +221,114 @@ Rangeヘッダフィールドは https://tools.ietf.org/html/rfc7232[RFC7232] �
 == Responses to a Range Request
 
 === 206 Partial Content
+
+206(Partial Content)ステータスコードは次の事を示している: リクエストのRangeヘッダフィールド内に発見された充足可能な対応する選択された表現の1つ以上の転送によって対象資源に対するRange requestsをserverが正常に実行したという事.
+
+**もし単一の部分が転送されているのであれば、206レスポンスを生成しているserverは `Content-Range` ヘッダフィールドを生成しなければならず**、それは選択された表現のどの様な範囲が囲まれているのかを説明しているものであり、且つ、ペイロードはその範囲からなる事を示している.例えば:
+
+```
+HTTP/1.1 206 Partial Content
+Date: Wed, 15 Nov 1995 06:25:24 GMT
+Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+Content-Range: bytes 21010-47021/47022
+Content-Length: 26012
+Content-Type: image/gif
+
+... 26012 bytes of partial image data ...
+```
+
+**もし複数の部分が転送されているのであれば、206レスポンスを生成しているserverは付録Aにて定義されている様に `multipart/byteranges` ペイロードと、multipart/byterangesメディアタイプを含んでいるContent-Typeヘッダフィールドとその要求される境界パラメータを生成しなければならない**.
+
+**単一部分レスポンスとの混乱を避けるため、serverは複数部分レスポンス(このフィールドは各々の部分の代わりに送信される)のHTTPヘッダセクション内のContent-Rangeフィールドを生成してはならない**.
+
+**multipartペイロード内の各々のBody部のヘッダ領域内にて、serverはそのボディ部に囲まれている範囲に対応しているContent-Rangeヘッダフィールドを生成しなければならない**.
+もし選択された表現が200(OK)レスポンス内にContent-Typeヘッダフィールを持っていた場合、**serverは各々のボディ部のヘッダ領域内に同じContent-Typeを生成するべき**である.例として:
+
+```
+  HTTP/1.1 206 Partial Content
+  Date: Wed, 15 Nov 1995 06:25:24 GMT
+  Last-Modified: Wed, 15 Nov 1995 04:58:08 GMT
+  Content-Length: 1741
+  Content-Type: multipart/byteranges; boundary=THIS_STRING_SEPARATES
+
+  --THIS_STRING_SEPARATES
+  Content-Type: application/pdf
+  Content-Range: bytes 500-999/8000
+
+  ...the first range...
+  --THIS_STRING_SEPARATES
+  Content-Type: application/pdf
+  Content-Range: 7000-7999/8000
+
+  ...the second range...
+  --THIS_STRING_SEPARATES--
+```
+
+複数部分がリクエストされた時、serverは任意の重複範囲を合体させるかもしれないし、もしくは、受信されたRangeヘッダフィールドに対応する `byte-range-spec` がその順序で現れるかどうかに関わらず、複数部分の送信オーバーヘッドより小さい隙間によって分けるかもしれない.
+典型的なmultipart/byterangesペイロードの部分間のオーバーヘッドはおよそ80 bytesであるから、選択された表現のメディアタイプと選択された境界パラメータ長に依存し、多くの小さな分離した部分を送信する事は選択された表現全体を送信する事に比べて効率が悪くなり得る.
+
+**serverは単一範囲のリクエストに対してmultipartレスポンスを生成してはならない**、何故なら、multipartをリクエストしていないclientはmultipartレスポンスをサポートしていないかもしれないからである.
+しかしながら、もし、複数部分がリクエストされ、且つ、たった1つのみ充足可能な範囲が見つかったり、または、重複範囲を合体後残りの範囲が1つしか無い場合、serverは単一のBody部のみを持つmultipart/byterangesペイロードを生成するかもしれない.
+multipart/byterangesレスポンスを処理できないclientは複数範囲を尋ねるリクエストを生成してはならない(byte-range-setとしてカンマが入る様な記述をするなという意味).
+
+multipartレスポンスペイロードが生成された時、serverは受信されたRangeヘッダフィールドに現れる**byte-range-specに対応し同じ順序で部分を送信するべき**である、ただし、それらの範囲が充足可能ではないと考えられる場合や他の範囲と合体された場合を除く.
+**multipartレスポンスを受信するclientは、各々のBody部に含まれる範囲を決定するため、各々のBody部に存在するContent-Rangeヘッダフィールドを検査しなければならない**; clientは自身がリクエストしたものと同じ同じ範囲、同じ順序で受信しているのだと信頼できないからである.
+
+**206レスポンスが生成される時、もし、そのフィールドが同リクエストに対し200(OK)レスポンス内で送信される場合、serverは上記で要求されたものに加え、後続のヘッダフィールドを生成しなければならない;  Date, Cache-Control, ETag, Expires, Content-Location, Vary**.
+
+もしIf-Rangeヘッダフィールドを持つリクエストに対するレスポンス内で206が生成される場合、その**送信者は上記で要求されたものを超えて他の表現ヘッダフィールドを生成するべきでは無い**. 何故ならば、clientはそれらのヘッダフィールドを含んでいる以前のレスポンスを既に持っていると理解されるからである.
+
+明示的なキャッシュコントロールによる特別な指示が無い限り(https://tools.ietf.org/html/rfc7234#section-4.2.2[Section 4.2.2 [RFC7234]を参照])、206レスポンスはデフォルトでキャッシュ可能である.
+
+=== Content-Range
+
+送信される `Content-Range` ヘッダフィールドは場合に応じてそれぞれの意味を持つ.
+
+* single part 206(Partial Content)レスポンス内の `Content-Range`
+** メッセージペイロードに同封される選択された表現の部分的な範囲を示す
+* multipart 206(Partial Content)レスポンス内の `Content-Range`
+** Body内の各々のpartに同封された範囲を示すため
+* 416(Range Not Satisfiable)レスポンス内の `Content-Range`
+** 選択された表現に関する情報を提供するため
+
+```
+  Content-Range       = byte-content-range / other-content-range
+
+  byte-content-range  = bytes-unit SP (byte-range-resp / unsatisfied-range)
+
+  byte-range-resp     = byte-range "/" ( complete-length / "*" )
+  byte-range          = first-byte-pos "-" last-byte-pos
+  unsatisfied-range   = "*/" complete-length
+
+  complete-length     = 1*DIGIT
+
+  other-content-range = other-range-unit SP other-range-resp
+  other-range-resp    = *CHAR
+```
+
+**もし受信者が理解できないrange unitを持つContent-Rangeヘッダフィールドを206(Partial Content)レスポンスが含むのであれば、受信者は保持された表現を用いてその再結合を試みてはならない**.
+その様なメッセージを受信するプロキシはそれを**ダウンストリームへ転送するべき**である.
+
+byte rangesのため、完全な長さが不明であるかその決定が難しい場合を除き、送信者はその範囲が抽出された**表現の完全な長さを示すべき**である.
+complete-lengthの代わりのアスタリスク文字("*")は、ヘッダフィールドが生成された時点ではその表現の長さが不明であった事を示す.
+
+次の例は選択された表現の長さがそう人車により1234 bytesであると知られた事を示している:
+
+```
+  Content-Range: bytes 42-1233/1234
+```
+
+そしてこの第二の例は完全な長さが不明であった事を示している:
+
+```
+  Content-Range: bytes 42-1233/*
+```
+
+もしContent-Rangeフィールド値がfirst-byte-pos値未満のlast-byte-pos値を持つbyte-range-respを含んでいる場合、もしくはcomplete-length値がそのlast-byte-pos値**以下**である場合、そのContent-Rangeフィールド値は無効である.
+
+[NOTE]
+last-byte-posは0-originであるためcomplete-lengthと同値である場合はcomplete-lengthより大きなlengthを返却している事になるため
+
+**無効なContent-Rangeの受信者は保持する表現を用いて受信したコンテンツの再結合を試みてはならない**.
+
+byte-rangeリクエストに対し416(Range Not Satisfiable)レスポンスを生成しているserver
