@@ -1,0 +1,50 @@
+:lang: ja
+:doctype: book
+:toc: left
+:toc-title: 目次
+:sectnums:
+:sectlinks:
+:icons: font
+:source-highlighter: coderay
+:exmaple-caption: 例
+:table-caption: 表
+:figure-caption: 図
+:author: homuraction
+:revnumber: 0.1
+:revdate: 2018/08/22
+
+= Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing
+
+**Abstract**
+
+HTTPは状態を持たないapplication層の分散・協調・hypertext information system protocolである.
+この文書はあるHTTP architectureとそれに関連する用語の概要を提供する. それは"http" と "https" Uniform Resource Identifier (URI) schemes (画一的なresourceの識別子案)と、HTTP/1.1のmessage syntaxとその解析要件を定義し、そして実装に関連するsecurity上の懸念を説明する.
+
+== Introduction
+
+HTTPは状態を持たないapplication層のrequest/response protocolである. そのprotocolは拡張可能なsemanticsと自己記述的なmessage payloadを、ネットワークをベースとしたhypertext information systemsによる、柔軟な対話のために用いる.
+この文書はHTTP/1.1の仕様書から一括に纏められた一連の文書の第一番目である:
+
+. "Meesage Syntax and Routing" (この文書)
+. "Semantics and Content" https://tools.ietf.org/html/rfc7231[[RFC7231]]
+. "Conditional Requests" https://tools.ietf.org/html/rfc7232[[RFC7232]]
+. "Range Requests" https://tools.ietf.org/html/rfc7233[[RFC7233]]
+. "Caching" https://tools.ietf.org/html/rfc7234[[RFC7234]]
+. "Authentication" https://tools.ietf.org/html/rfc7235[[RFC7235]]
+
+このHTTP/1.1仕様書は(HTTPのバージョン管理により) https://tools.ietf.org/html/rfc2616[RFC 2616] と https://tools.ietf.org/html/rfc2145[RFC 2145] を廃止する.
+この仕様は以前 https://tools.ietf.org/html/rfc2817[RFC2817] で定義されていた `CONNECT` の使用を更新し、トンネルを確立するものでもあり、 https://tools.ietf.org/html/rfc2818[RFC2818] にて非公式に説明されていた "https" URI schemeを定義するものでもある.
+
+HTTPはinformation systemのための汎用的なinterface protocolである.
+それは、提供されたresourceのtypeと独立したclientに対して画一的なinterfaceを提示する事によって、どんなサービスが実装されているかの詳細を隠すために設計されている.
+同様に、serversは各々のclientの目的を認識する必要が無い: HTTP requestは、特定のtypeのclientや事前に決定されたapplicationの一連のstepに関連付けられるのではなく、独立して考えられる.
+その結果が様々な文脈上で効果的に使用できるprotocolであり、その実装は時間とともに独立して進化する事ができる.
+
+HTTPは非HTTP information systemsとのやりとりを翻訳するためのintermediate protocolとして利用するためにも設計されている.
+HTTP proxiesとgatewaysは、代替information servicesの多様なprotocolsを、HTTP servicesとして同じ方法に則るclientにより閲覧したり操作する事が可能なhypertext formatに翻訳する事によって、それらのsevicesに対するアクセスを提供する事ができる.
+
+この柔軟性による一つの結果、protocolはinterfaceの裏側で何が起こるのかという面においては定義され得ない.
+代わりに、我々は通信の構文、受信した通信の意図、及び受信者の予想される振る舞いを定義する事に限定される.
+
+もしその通信が独立であると考えられるならば、次の成功したactionは、serversにより提供される観察可能なinterfaceへの対応する変更に、反映されるべきである.
+しかしながら、複数のclientsは並列に行動するかもしれない上に恐らく多目的に行動するため、我々は、単一のresponseのscopeを超えてその様な観察可能である変更を、要求する事ができない.
