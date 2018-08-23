@@ -48,3 +48,45 @@ HTTP proxiesとgatewaysは、代替information servicesの多様なprotocolsを�
 
 もしその通信が独立であると考えられるならば、次の成功したactionは、serversにより提供される観察可能なinterfaceへの対応する変更に、反映されるべきである.
 しかしながら、複数のclientsは並列に行動するかもしれない上に恐らく多目的に行動するため、我々は、単一のresponseのscopeを超えてその様な観察可能である変更を、要求する事ができない.
+
+この文書はHTTP内で用いられるまたは参照されるアーキテクチャ要素を説明する、これは"http"と"https" URI schemesを定義する、それらはネットワークオペレーションと接続管理全体を説明する、そしてHTTP message framing要件と転送要件を定義する.
+我々の目標はmessage semanticsに依存しないHTTP message handlingに必要なメカニズムの全てを定義する事であり、それによってmessage parsersとmessagea forwarding intermediariesのための要件の完全な集合を定義する事である.
+
+=== Requirments Notation
+
+key wordsに関しては省略
+
+適合基準とエラーハンドリングに関する考慮事項は https://tools.ietf.org/html/rfc7230#section-2.5[Section 2.5] で定義される.
+
+=== Syntax Notation
+
+この仕様は https://tools.ietf.org/html/rfc7230#section-7[Section 7] で定義されるlist拡張を用いた https://tools.ietf.org/html/rfc5234[RFC5234] のABNF記法を利用し、それはカンマ区切りリストのコンパクトな定義のために'#'演算子('*'演算子がどの様にして反復を示すのかに似ている)を用いる事を許可する.
+https://tools.ietf.org/html/rfc7230#appendix-B[付録B] は標準のABNF記法を拡張したすべてのlist演算子を使った文法集を見せる.
+
+後続のcore rulesはreferenceに含まれている、 https://tools.ietf.org/html/rfc5234#appendix-B.1[RFC5234, Appendix B.1] にて定義されたものとして:
+
+* ALPHA (letters)
+* CR (carriage return)
+* CRLF (CR LF)
+* CTL (controls)
+* DIGIT (decimal 0-9)
+* DQUOTE (double quote)
+* HEXDIG (hexadecimal 0-9/A-F/a-f)
+* HTAB (horizontal tab)
+* LF (line feed)
+* OCTET (any 8-bit sequence of data)
+* SP (space)
+* VCHAR (any visible https://tools.ietf.org/html/rfc7230#ref-USASCII[USASCII] character)
+
+伝統として、"obs-"接頭辞のついたABNF rule namesは歴史的な理由により現れる"obsolete"文法規則である事を示す.
+
+== Architecture
+
+HTTPはWorld Wide Web(WWW)アーキテクチャのために作成された、そして世界規模のhypertext systemが必要なscalabilityをサポートするため時間とともに進化してきた.
+そのアーキテクチャの多くは用語とHTTPを定義するために用いられる構文作品に反映される.
+
+=== Client/Server Messaging
+
+HTTPは状態を持たない request/response protocolであり、それは信頼できるtransport層もしくはsession層 "connection" https://tools.ietf.org/html/rfc7230#section-6[(Section 6)] を横断してmessageを交換する事 https://tools.ietf.org/html/rfc7230#section-3[(Section 3)]により操作する.
+HTTP "client"は1つ以上のHTTP requestsを送信する事を目的にserverへの接続を確立するプログラムである.
+HTTP "server"はHTTP responseを送信する事によりHTTP requestsにサービスを行うために接続を受け入れるプログラムである.
