@@ -90,3 +90,6 @@ HTTPはWorld Wide Web(WWW)アーキテクチャのために作成された、そ
 HTTPは状態を持たない request/response protocolであり、それは信頼できるtransport層もしくはsession層 "connection" https://tools.ietf.org/html/rfc7230#section-6[(Section 6)] を横断してmessageを交換する事 https://tools.ietf.org/html/rfc7230#section-3[(Section 3)]により操作する.
 HTTP "client"は1つ以上のHTTP requestsを送信する事を目的にserverへの接続を確立するプログラムである.
 HTTP "server"はHTTP responseを送信する事によりHTTP requestsにサービスを行うために接続を受け入れるプログラムである.
+
+"client"と"server"という用語は、これらのprogramsが特定のconnectionに対し実行する、そういう役割のみを指す.
+いくつかのconnections上のとあるclientとして、且つ、他のconnections上のとあるserverとして同じprogramが動作しているかもしれない.
