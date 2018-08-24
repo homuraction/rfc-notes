@@ -274,8 +274,8 @@ multipart/byterangesレスポンスを処理できないclientは複数範囲を
 multipartレスポンスペイロードが生成された時、serverは受信されたRangeヘッダフィールドに現れる**byte-range-specに対応し同じ順序で部分を送信するべき**である、ただし、それらの範囲が充足可能ではないと考えられる場合や他の範囲と合体された場合を除く.
 **multipartレスポンスを受信するclientは、各々のBody部に含まれる範囲を決定するため、各々のBody部に存在するContent-Rangeヘッダフィールドを検査しなければならない**; clientは自身がリクエストしたものと同じ同じ範囲、同じ順序で受信しているのだと信頼できないからである.
 
-**206レスポンスが生成される時、もし、そのフィールドが同リクエストに対し200(OK)レスポンス内で送信される場合、serverは上記で要求されたものに加え、後続のヘッダフィールドを生成しなければならない;  Date, Cache-Control, ETag, Expires, Content-Location, Vary**.
-要するに通常の200(OK) responseで返却するHeader fieldsの他にこれらのHeaderを追加して送信しろということ.
+**206(Partial Content) responseを生成する際は上記のHeader Fieldsに加え、同じrequestに対する200(OK) response内にて送信される次のHeader fieldsを生成しなければならない: Date / Cache-Control / ETag / Expires / Content-Location / Vary を生成しなければならない**.
+要するに通常の200(OK) responseで返却するHeader fieldsの中に上記のHeaderの内1つ以上が含まれるのであれば206 responseでもそれらを加えろという事.
 
 もしIf-Rangeヘッダフィールドを持つリクエストに対するレスポンス内で206が生成される場合、その**送信者は上記で要求されたものを超えて他の表現ヘッダフィールドを生成するべきでは無い**. 何故ならば、clientはそれらのヘッダフィールドを含んでいる以前のレスポンスを既に持っていると理解されるからである.
 
